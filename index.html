@@ -98,8 +98,8 @@
 'use strict';
 
 /* ===== Версия (обновляется при каждом изменении) ===== */
-const VERSION = '1.2';
-const BUILD_DATE = '2026-11-16 08:14'; // время по Вильнюсу
+const VERSION = '1.3';
+const BUILD_DATE = '2026-11-16 08:54'; // время по Вильнюсу
 
 /* ===== Настройки ===== */
 // Можно вписать токен flespi сюда, тогда игрокам не придётся вводить его вручную.
@@ -413,7 +413,7 @@ function logLine(e) {
   const who = esc(nameOf(e.pid));
   return e.type === 'take'
     ? `<div><b>${who}</b> берёт ${e.card}${e.pot ? ` и ${e.pot} фиш.` : ''}</div>`
-    : `<div>${who}: «Нет, спасибо» на ${e.card}</div>`;
+    : `<div><b>${who}</b> отказывается от ${e.card}</div>`;
 }
 
 function renderGame() {
