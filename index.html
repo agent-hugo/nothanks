@@ -98,8 +98,8 @@
 'use strict';
 
 /* ===== Версия (обновляется при каждом изменении) ===== */
-const VERSION = '1.5';
-const BUILD_DATE = '2026-11-16 09:18'; // время по Вильнюсу
+const VERSION = '1.6';
+const BUILD_DATE = '2026-11-16 09:34'; // время по Вильнюсу
 
 /* ===== Настройки ===== */
 // Можно вписать токен flespi сюда, тогда игрокам не придётся вводить его вручную.
@@ -222,9 +222,19 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && client && !client.connected) client.reconnect();
 });
 
-function publishPresence() {
-  client.publish(`${base}/p/${pid}`, JSON.stringify({ id: pid, name: myName, ts: Date.now() }), { qos: 1, retain: true });
+// Время входа в комнату запоминается один раз, чтобы переподключения
+// (а на телефоне они частые) не перемешивали порядок игроков.
+function joinedAt() {
+  const key = 'nt_joined_' + room;
+  let t = Number(store.get(key));
+  if (!t) { t = Date.now(); store.set(key, String(t)); }
+  return t;
 }
+function publishPresence() {
+  client.publish(`${base}/p/${pid}`, JSON.stringify({ id: pid, name: myName, ts: joinedAt() }), { qos: 1, retain: true });
+}
+// Порядок игроков: по времени входа, при равенстве — по id
+const byJoin = (a, b) => (a.ts - b.ts) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 function clearPresence(id) {
   client.publish(`${base}/p/${id}`, '', { qos: 1, retain: true });
 }
@@ -276,7 +286,7 @@ const actions = {
   copyLink() { copyText(shareLink()); },
   kick(id) { clearPresence(id); },
   start() {
-    const players = Object.values(presence).sort((a, b) => a.ts - b.ts).map(p => ({ id: p.id, name: p.name }));
+    const players = Object.values(presence).sort(byJoin).map(p => ({ id: p.id, name: p.name }));
     const tactical = tacticalOpt;
     try {
       const g = NoThanks.newGame(players, { tactical });
@@ -294,6 +304,7 @@ const actions = {
     if (state?.phase === 'play') { goto({}); return; }
     if (connected) clearPresence(pid);
     store.set('nt_lastroom', '');
+    store.set('nt_joined_' + room, '');
     setTimeout(() => goto({}), 300);
   },
   back() { goto({ room: store.get('nt_lastroom') }); },
@@ -380,7 +391,7 @@ function renderEnter() {
 }
 
 function renderLobby() {
-  const list = Object.values(presence).sort((a, b) => a.ts - b.ts);
+  const list = Object.values(presence).sort(byJoin);
   const n = list.length;
   const inRoom = !!presence[pid];
   const canStart = connected && inRoom && n >= NoThanks.MIN_PLAYERS && n <= NoThanks.MAX_PLAYERS;
