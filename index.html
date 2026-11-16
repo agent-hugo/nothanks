@@ -98,8 +98,8 @@
 'use strict';
 
 /* ===== Версия (обновляется при каждом изменении) ===== */
-const VERSION = '1.4';
-const BUILD_DATE = '2026-11-16 09:06'; // время по Вильнюсу
+const VERSION = '1.5';
+const BUILD_DATE = '2026-11-16 09:18'; // время по Вильнюсу
 
 /* ===== Настройки ===== */
 // Можно вписать токен flespi сюда, тогда игрокам не придётся вводить его вручную.
@@ -181,6 +181,7 @@ function nameOf(id) {
 
 /* ===== Сеть ===== */
 function connect() {
+  store.set('nt_lastroom', room);
   client = mqtt.connect(BROKER_URL, {
     username: token, password: '',
     clientId: `nt-${pid}-${rid(4)}`,
@@ -289,15 +290,18 @@ const actions = {
   },
   toLobby() { publishState({ phase: 'lobby' }); },
   leave() {
-    if (state?.phase === 'play' && state.players.some(p => p.id === pid) &&
-        !confirm('Партия идёт. Всё равно выйти?')) return;
+    // Во время партии — просто уходим на главную: место в партии и в комнате сохраняется
+    if (state?.phase === 'play') { goto({}); return; }
     if (connected) clearPresence(pid);
+    store.set('nt_lastroom', '');
     setTimeout(() => goto({}), 300);
   },
+  back() { goto({ room: store.get('nt_lastroom') }); },
   closeRoom() {
     if (!confirm('Удалить комнату и всё её состояние у брокера?')) return;
     client.publish(`${base}/state`, '', { qos: 1, retain: true });
     for (const id of Object.keys(presence)) clearPresence(id);
+    store.set('nt_lastroom', '');
     setTimeout(() => goto({}), 400);
   },
 };
@@ -320,7 +324,7 @@ function render() {
       <div><span class="conn ${connected ? 'on' : ''}"></span><span class="room">${esc(room)}</span></div>
       <div class="row" style="flex:0 0 auto">
         <button class="small" data-act="share">Пригласить</button>
-        <button class="small" data-act="leave">Выйти</button>
+        <button class="small" data-act="leave">${phase === 'play' ? 'На главную' : 'Выйти'}</button>
       </div>
     </div>`;
   let body;
@@ -339,6 +343,8 @@ function render() {
 function renderHome() {
   app.innerHTML = `
     <h1>Нет, спасибо!</h1>
+    ${store.get('nt_lastroom') ? `<button class="ok" style="width:100%;margin-bottom:12px" data-act="back">
+      Вернуться в комнату ${esc(store.get('nt_lastroom'))}</button>` : ''}
     <div class="panel">
       <label for="name">Ваше имя</label>
       <input id="name" type="text" maxlength="20" value="${esc(myName)}" autocomplete="nickname">
