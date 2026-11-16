@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b1f2a">
+<title>Нет, спасибо!</title>
+<style>
+  :root {
+    --bg: #1b1f2a; --panel: #262b39; --panel2: #303648; --text: #eef0f5; --muted: #9aa3b8;
+    --accent: #ffcc4d; --ok: #4cc38a; --bad: #ef6461; --chip: #e9b949;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #app { max-width: 520px; margin: 0 auto;
+    padding: calc(12px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom)); }
+  h1 { font-size: 24px; margin: 8px 0 16px; }
+  h2 { font-size: 15px; margin: 18px 0 8px; color: var(--muted); font-weight: 600;
+    text-transform: uppercase; letter-spacing: .04em; }
+  .panel { background: var(--panel); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  label { display: block; font-size: 14px; color: var(--muted); margin: 10px 0 4px; }
+  input[type=text], input[type=password] { width: 100%; padding: 12px; border-radius: 10px;
+    border: 1px solid #444b60; background: #1f2431; color: var(--text); font-size: 16px; }
+  button { font: inherit; border: 0; border-radius: 12px; padding: 13px 16px; cursor: pointer;
+    background: var(--panel2); color: var(--text); font-weight: 600; }
+  button:disabled { opacity: .4; cursor: default; }
+  button.primary { background: var(--accent); color: #222; }
+  button.ok { background: var(--ok); color: #10251a; }
+  button.bad { background: var(--bad); color: #2a0c0b; }
+  button.small { padding: 6px 10px; font-size: 14px; border-radius: 8px; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .row > * { flex: 1; }
+  .grow { flex: 1; }
+  .muted { color: var(--muted); }
+  .center { text-align: center; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .topbar .room { font-weight: 700; letter-spacing: .08em; }
+  .conn { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--bad); margin-right: 6px; }
+  .conn.on { background: var(--ok); }
+  .plist { list-style: none; padding: 0; margin: 0; }
+  .plist li { display: flex; align-items: center; justify-content: space-between; padding: 8px 0;
+    border-bottom: 1px solid #343a4d; }
+  .plist li:last-child { border-bottom: 0; }
+
+  /* Стол */
+  .table { display: flex; align-items: center; justify-content: center; gap: 22px; padding: 18px 0 8px; }
+  .bigcard { width: 120px; height: 168px; border-radius: 14px; display: flex; align-items: center;
+    justify-content: center; font-size: 56px; font-weight: 800; color: #fff;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35); text-shadow: 0 2px 4px rgba(0,0,0,.35); }
+  .pot { text-align: center; }
+  .pot .chipbig { width: 56px; height: 56px; border-radius: 50%; background: var(--chip); color: #3a2a00;
+    display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800;
+    border: 4px dashed #c99a2a; margin: 0 auto 6px; }
+  .deckinfo { text-align: center; color: var(--muted); font-size: 14px; }
+  .turninfo { text-align: center; font-size: 18px; font-weight: 700; margin: 10px 0; min-height: 26px; }
+  .turninfo.me { color: var(--accent); }
+  .actions { display: flex; gap: 10px; }
+  .actions button { flex: 1; padding: 18px 10px; font-size: 18px; }
+
+  .player { background: var(--panel); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px;
+    border: 2px solid transparent; }
+  .player.active { border-color: var(--accent); }
+  .player.me { background: #2b3245; }
+  .player .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .player .name { font-weight: 700; }
+  .player .stats { font-size: 14px; color: var(--muted); white-space: nowrap; }
+  .cards { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; min-height: 8px; }
+  .run { display: flex; gap: 2px; }
+  .run.chain { padding: 2px; border-radius: 8px; background: rgba(255,255,255,.18); }
+  .c { width: 30px; height: 40px; border-radius: 6px; display: flex; align-items: center;
+    justify-content: center; font-weight: 800; font-size: 14px; color: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.4); border: 1px solid rgba(0,0,0,.25); }
+  .c.counts { outline: 2px solid #fff; outline-offset: -2px; }
+
+  .log { font-size: 14px; color: var(--muted); max-height: 140px; overflow: auto; }
+  .log div { padding: 2px 0; }
+  table.res { width: 100%; border-collapse: collapse; }
+  table.res td, table.res th { padding: 8px 4px; text-align: right; border-bottom: 1px solid #343a4d; }
+  table.res td:first-child, table.res th:first-child, table.res td:nth-child(2), table.res th:nth-child(2) { text-align: left; }
+  table.res tr.win td { color: var(--accent); font-weight: 700; }
+
+  #toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: #000c; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 15px;
+    opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90%; text-align: center; }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+
+<script src="https://unpkg.com/mqtt@5/dist/mqtt.min.js"></script>
+<script src="game.js"></script>
+<script>
+'use strict';
+
+/* ===== Настройки ===== */
+// Можно вписать токен flespi сюда, тогда игрокам не придётся вводить его вручную.
+// Токен будет виден в коде страницы — используйте токен с ACL только на топики "nothanks/#".
+const DEFAULT_TOKEN = '';
+const BROKER_URL = 'wss://mqtt.flespi.io';
+const TOPIC_ROOT = 'nothanks/v1';
+
+/* ===== Идентичность игрока ===== */
+const params = new URLSearchParams(location.search);
+const room = (params.get('room') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+// ?as=2 — второй игрок в том же браузере (удобно для тестов в нескольких вкладках)
+const seat = (params.get('as') || '').replace(/[^a-zA-Z0-9]/g, '');
+const store = {
+  get: k => { try { return localStorage.getItem(k + seat); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k + seat, v); } catch {} },
+};
+function rid(n, alphabet = 'abcdefghijkmnpqrstuvwxyz23456789') {
+  let s = ''; const a = crypto.getRandomValues(new Uint32Array(n));
+  for (const x of a) s += alphabet[x % alphabet.length];
+  return s;
+}
+const pid = store.get('nt_pid') || (() => { const v = rid(10); store.set('nt_pid', v); return v; })();
+let myName = store.get('nt_name') || '';
+let token = store.get('nt_token') || DEFAULT_TOKEN;
+
+/* ===== Состояние клиента ===== */
+let client = null;
+let connected = false;
+let state = null;      // общее состояние партии (retain-топик .../state)
+let presence = {};     // кто в комнате (retain-топики .../p/<id>)
+let wasMyTurn = false;
+let tacticalOpt = false; // переживает перерисовки лобби
+const base = `${TOPIC_ROOT}/${room}`;
+const app = document.getElementById('app');
+
+/* ===== Утилиты ===== */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2500);
+}
+function cardColor(c) {
+  const hue = 140 - ((c - 3) / 32) * 140; // зелёный (дешёвые) → красный (дорогие)
+  return `hsl(${hue}, 62%, 42%)`;
+}
+function cardHtml(c, counts) {
+  return `<div class="c${counts ? ' counts' : ''}" style="background:${cardColor(c)}">${c}</div>`;
+}
+function cardsHtml(cards) {
+  return NoThanks.runs(cards).map(r =>
+    `<div class="run${r.length > 1 ? ' chain' : ''}">${r.map((c, i) => cardHtml(c, i === 0 && r.length > 1)).join('')}</div>`).join('');
+}
+function goto(q) {
+  const u = new URLSearchParams(q);
+  if (seat) u.set('as', seat);
+  const s = u.toString();
+  location.href = location.pathname + (s ? '?' + s : '');
+}
+function shareLink() { return `${location.origin}${location.pathname}?room=${room}`; }
+function nameOf(id) {
+  const p = state?.players?.find(p => p.id === id) || presence[id];
+  return p ? p.name : '?';
+}
+
+/* ===== Сеть ===== */
+function connect() {
+  client = mqtt.connect(BROKER_URL, {
+    username: token, password: '',
+    clientId: `nt-${pid}-${rid(4)}`,
+    clean: true, keepalive: 30, reconnectPeriod: 2000, connectTimeout: 10000,
+    resubscribe: false,
+  });
+  client.on('connect', () => {
+    connected = true;
+    client.subscribe(`${base}/#`, { qos: 1 });
+    if (myName) publishPresence();
+    render();
+  });
+  client.on('close', () => { if (connected) { connected = false; render(); } });
+  client.on('error', e => {
+    toast('Ошибка связи: ' + e.message);
+    if (/auth|not authorized|bad user/i.test(e.message)) { client.end(true); render(); }
+  });
+  client.on('message', (topic, buf) => {
+    const sub = topic.slice(base.length + 1);
+    const txt = buf.toString();
+    let data = null;
+    if (txt) { try { data = JSON.parse(txt); } catch { return; } }
+    if (sub === 'state') {
+      // Принимаем состояние не старше текущего. Порядок сообщений в топике одинаков
+      // у всех подписчиков, поэтому при гонке все сойдутся на последнем.
+      if (!data) state = null;
+      else if (!state || (data.seq || 0) >= (state.seq || 0)) state = data;
+      render();
+    } else if (sub.startsWith('p/')) {
+      const id = sub.slice(2);
+      if (data) presence[id] = data; else delete presence[id];
+      render();
+    }
+  });
+}
+document.addEventListener('visibilitychange', () => {
+  // Мобильные браузеры рвут соединение в фоне — переподключаемся при возврате
+  if (document.visibilityState === 'visible' && client && !client.connected) client.reconnect();
+});
+
+function publishPresence() {
+  client.publish(`${base}/p/${pid}`, JSON.stringify({ id: pid, name: myName, ts: Date.now() }), { qos: 1, retain: true });
+}
+function clearPresence(id) {
+  client.publish(`${base}/p/${id}`, '', { qos: 1, retain: true });
+}
+function publishState(next) {
+  if (!connected) { toast('Нет связи с сервером'); return false; }
+  next.seq = (state?.seq || 0) + 1;
+  next.ts = Date.now();
+  state = next;
+  client.publish(`${base}/state`, JSON.stringify(next), { qos: 1, retain: true });
+  render();
+  return true;
+}
+
+/* ===== Действия ===== */
+const actions = {
+  saveSetup() {
+    const n = document.getElementById('name').value.trim().slice(0, 20);
+    const t = document.getElementById('token')?.value.trim();
+    if (!n) { toast('Введите имя'); return false; }
+    myName = n; store.set('nt_name', n);
+    if (t !== undefined && t !== '') { token = t; store.set('nt_token', t); }
+    if (!token) { toast('Нужен токен flespi'); return false; }
+    return true;
+  },
+  create() { if (actions.saveSetup()) goto({ room: rid(5, 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789') }); },
+  join() {
+    const code = document.getElementById('code').value.trim().toUpperCase();
+    if (!code) { toast('Введите код комнаты'); return; }
+    if (actions.saveSetup()) goto({ room: code });
+  },
+  enter() {
+    if (!actions.saveSetup()) return;
+    if (!client) connect(); else publishPresence();
+    render();
+  },
+  rejoin() { publishPresence(); },
+  async share() {
+    const url = shareLink();
+    try {
+      if (navigator.share) await navigator.share({ title: 'Нет, спасибо!', text: `Комната ${room}`, url });
+      else { await navigator.clipboard.writeText(url); toast('Ссылка скопирована'); }
+    } catch {}
+  },
+  kick(id) { clearPresence(id); },
+  start() {
+    const players = Object.values(presence).sort((a, b) => a.ts - b.ts).map(p => ({ id: p.id, name: p.name }));
+    const tactical = tacticalOpt;
+    try {
+      const g = NoThanks.newGame(players, { tactical });
+      g.gameId = rid(6);
+      publishState(g);
+    } catch (e) { toast(e.message); }
+  },
+  move(type) {
+    try { publishState(NoThanks.apply(state, pid, type)); }
+    catch (e) { toast(e.message); }
+  },
+  toLobby() { publishState({ phase: 'lobby' }); },
+  leave() {
+    if (state?.phase === 'play' && state.players.some(p => p.id === pid) &&
+        !confirm('Партия идёт. Всё равно выйти?')) return;
+    if (connected) clearPresence(pid);
+    setTimeout(() => goto({}), 300);
+  },
+  closeRoom() {
+    if (!confirm('Удалить комнату и всё её состояние у брокера?')) return;
+    client.publish(`${base}/state`, '', { qos: 1, retain: true });
+    for (const id of Object.keys(presence)) clearPresence(id);
+    setTimeout(() => goto({}), 400);
+  },
+};
+app.addEventListener('change', e => { if (e.target.id === 'tactical') tacticalOpt = e.target.checked; });
+app.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  actions[b.dataset.act](b.dataset.arg);
+});
+
+/* ===== Отрисовка ===== */
+function render() {
+  if (!room) return renderHome();
+  if (!myName || !token) return renderEnter();
+  if (!client) connect();
+
+  const phase = state?.phase === 'play' || state?.phase === 'end' ? state.phase : 'lobby';
+  const top = `
+    <div class="topbar">
+      <div><span class="conn ${connected ? 'on' : ''}"></span><span class="room">${esc(room)}</span></div>
+      <div class="row" style="flex:0 0 auto">
+        <button class="small" data-act="share">Пригласить</button>
+        <button class="small" data-act="leave">Выйти</button>
+      </div>
+    </div>`;
+  let body;
+  if (phase === 'lobby') body = renderLobby();
+  else if (phase === 'play') body = renderGame();
+  else body = renderEnd();
+  app.innerHTML = top + body;
+
+  // Сигнал «ваш ход»
+  const myTurn = phase === 'play' && state.players[state.turn]?.id === pid;
+  if (myTurn && !wasMyTurn) navigator.vibrate?.(150);
+  wasMyTurn = myTurn;
+  document.title = myTurn ? '● Ваш ход — Нет, спасибо!' : 'Нет, спасибо!';
+}
+
+function renderHome() {
+  app.innerHTML = `
+    <h1>Нет, спасибо!</h1>
+    <div class="panel">
+      <label for="name">Ваше имя</label>
+      <input id="name" type="text" maxlength="20" value="${esc(myName)}" autocomplete="nickname">
+      ${tokenField()}
+    </div>
+    <div class="panel">
+      <button class="primary" style="width:100%" data-act="create">Создать комнату</button>
+      <label for="code">или войти по коду</label>
+      <div class="row">
+        <input id="code" type="text" maxlength="8" style="text-transform:uppercase" autocomplete="off">
+        <button data-act="join" style="flex:0 0 auto">Войти</button>
+      </div>
+    </div>
+    <p class="muted" style="font-size:14px">
+      3–7 игроков. Карты 3–35, в игре 24. Берите карту вместе с фишками или платите фишку, чтобы отказаться.
+      Цепочка подряд идущих карт считается по наименьшей. Каждая оставшаяся фишка — минус очко. Побеждает наименьший счёт.
+    </p>`;
+}
+function tokenField() {
+  if (DEFAULT_TOKEN) return '';
+  return `<label for="token">Токен flespi ${token ? '(сохранён)' : ''}</label>
+    <input id="token" type="password" placeholder="${token ? 'оставьте пустым, чтобы не менять' : 'FlespiToken …'}" autocomplete="off">`;
+}
+function renderEnter() {
+  app.innerHTML = `
+    <h1>Комната ${esc(room)}</h1>
+    <div class="panel">
+      <label for="name">Ваше имя</label>
+      <input id="name" type="text" maxlength="20" value="${esc(myName)}" autocomplete="nickname">
+      ${tokenField()}
+      <button class="primary" style="width:100%;margin-top:14px" data-act="enter">Войти</button>
+    </div>`;
+}
+
+function renderLobby() {
+  const list = Object.values(presence).sort((a, b) => a.ts - b.ts);
+  const n = list.length;
+  const inRoom = !!presence[pid];
+  const canStart = connected && inRoom && n >= NoThanks.MIN_PLAYERS && n <= NoThanks.MAX_PLAYERS;
+  return `
+    <div class="panel">
+      <h2 style="margin-top:0">Игроки (${n})</h2>
+      <ul class="plist">
+        ${list.map(p => `<li><span>${esc(p.name)}${p.id === pid ? ' <span class="muted">(вы)</span>' : ''}</span>
+          ${p.id !== pid ? `<button class="small" data-act="kick" data-arg="${esc(p.id)}">✕</button>` : ''}</li>`).join('')
+          || '<li class="muted">Пока никого…</li>'}
+      </ul>
+      ${!inRoom && connected ? '<button style="width:100%;margin-top:10px" data-act="rejoin">Присоединиться</button>' : ''}
+    </div>
+    <div class="panel">
+      <label style="display:flex;gap:10px;align-items:center;margin:0 0 12px;color:var(--text)">
+        <input type="checkbox" id="tactical" style="width:20px;height:20px" ${tacticalOpt ? 'checked' : ''}>
+        <span>Тактический вариант<br><span class="muted" style="font-size:14px">без карт 10, 20, 30; по 10 фишек</span></span>
+      </label>
+      <button class="primary" style="width:100%" data-act="start" ${canStart ? '' : 'disabled'}>Начать партию</button>
+      <p class="muted center" style="font-size:14px;margin:10px 0 0">
+        ${n < NoThanks.MIN_PLAYERS ? `Нужно минимум ${NoThanks.MIN_PLAYERS} игрока. Отправьте друзьям ссылку «Пригласить».`
+          : n > NoThanks.MAX_PLAYERS ? `Максимум ${NoThanks.MAX_PLAYERS} игроков.` : 'Первый игрок выбирается случайно.'}
+      </p>
+    </div>
+    <div class="center"><button class="small" data-act="closeRoom">Удалить комнату</button></div>`;
+}
+
+function logLine(e) {
+  const who = esc(nameOf(e.pid));
+  return e.type === 'take'
+    ? `<div><b>${who}</b> берёт ${e.card}${e.pot ? ` и ${e.pot} фиш.` : ''}</div>`
+    : `<div>${who}: «Нет, спасибо» на ${e.card}</div>`;
+}
+
+function renderGame() {
+  const s = state;
+  const cur = s.players[s.turn];
+  const me = s.players.find(p => p.id === pid);
+  const myTurn = cur.id === pid;
+  const others = s.players.filter(p => p.id !== pid);
+
+  const playerBox = (p, isMe) => {
+    const sc = NoThanks.score(p);
+    const stats = isMe
+      ? `фишек: <b>${p.chips}</b> · счёт: <b>${sc.total}</b>`
+      : `карты: ${sc.cards} · фишки: ?`;
+    return `<div class="player ${isMe ? 'me' : ''} ${p.id === cur.id ? 'active' : ''}">
+      <div class="head"><span class="name">${esc(p.name)}${isMe ? ' (вы)' : ''}</span><span class="stats">${stats}</span></div>
+      <div class="cards">${cardsHtml(p.cards)}</div>
+    </div>`;
+  };
+
+  return `
+    <div class="table">
+      <div class="bigcard" style="background:${cardColor(s.card)}">${s.card}</div>
+      <div class="pot"><div class="chipbig">${s.pot}</div><div class="muted" style="font-size:14px">фишек<br>на карте</div></div>
+    </div>
+    <div class="deckinfo">В колоде ещё ${s.deck.length} ${s.tactical ? '· тактический вариант' : ''}</div>
+    <div class="turninfo ${myTurn ? 'me' : ''}">${myTurn ? 'Ваш ход!' : `Ходит ${esc(cur.name)}`}</div>
+    ${me ? `
+      <div class="actions">
+        <button class="ok" data-act="move" data-arg="take" ${myTurn && connected ? '' : 'disabled'}>Взять${s.pot ? ` +${s.pot}` : ''}</button>
+        <button class="bad" data-act="move" data-arg="pass" ${myTurn && connected && me.chips > 0 ? '' : 'disabled'}>Нет, спасибо<br><small>−1 фишка</small></button>
+      </div>
+      <h2>Вы</h2>
+      ${playerBox(me, true)}` : '<p class="muted center">Вы наблюдаете за партией.</p>'}
+    <h2>Соперники</h2>
+    ${others.map(p => playerBox(p, false)).join('')}
+    <h2>Ходы</h2>
+    <div class="panel log" id="log">${s.log.slice().reverse().map(logLine).join('') || '<div>Партия началась</div>'}</div>`;
+}
+
+function renderEnd() {
+  const rows = NoThanks.ranking(state);
+  return `
+    <h1 class="center">🏁 ${esc(rows.filter(r => r.place === 1).map(r => r.name).join(', '))} побеждает!</h1>
+    <div class="panel">
+      <table class="res">
+        <tr><th>#</th><th>Игрок</th><th>Карты</th><th>Фишки</th><th>Итог</th></tr>
+        ${rows.map(r => `<tr class="${r.place === 1 ? 'win' : ''}"><td>${r.place}</td><td>${esc(r.name)}</td>
+          <td>${r.cards}</td><td>−${r.chips}</td><td>${r.total}</td></tr>`).join('')}
+      </table>
+    </div>
+    ${state.players.map(p => `<div class="player"><div class="head"><span class="name">${esc(p.name)}</span>
+      <span class="stats">фишек: ${p.chips}</span></div><div class="cards">${cardsHtml(p.cards)}</div></div>`).join('')}
+    <div class="row" style="margin-top:12px">
+      <button class="primary" data-act="toLobby" ${connected ? '' : 'disabled'}>Ещё партия</button>
+      <button data-act="closeRoom">Удалить комнату</button>
+    </div>`;
+}
+
+render();
+</script>
+</body>
+</html>
