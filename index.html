@@ -98,8 +98,8 @@
 'use strict';
 
 /* ===== Версия (обновляется при каждом изменении) ===== */
-const VERSION = '1.3';
-const BUILD_DATE = '2026-11-16 08:54'; // время по Вильнюсу
+const VERSION = '1.4';
+const BUILD_DATE = '2026-11-16 09:06'; // время по Вильнюсу
 
 /* ===== Настройки ===== */
 // Можно вписать токен flespi сюда, тогда игрокам не придётся вводить его вручную.
@@ -425,9 +425,7 @@ function renderGame() {
 
   const playerBox = (p, isMe) => {
     const sc = NoThanks.score(p);
-    const stats = isMe
-      ? `фишек: <b>${p.chips}</b> · счёт: <b>${sc.total}</b>`
-      : `карты: ${sc.cards} · фишки: ?`;
+    const stats = `карты: ${sc.cards} · фишки: ${isMe ? p.chips : '?'}`;
     return `<div class="player ${isMe ? 'me' : ''} ${p.id === cur.id ? 'active' : ''}">
       <div class="head"><span class="name">${esc(p.name)}${isMe ? ' (вы)' : ''}</span><span class="stats">${stats}</span></div>
       <div class="cards">${cardsHtml(p.cards)}</div>
@@ -446,7 +444,7 @@ function renderGame() {
         <button class="ok" data-act="move" data-arg="take" ${myTurn && connected ? '' : 'disabled'}>Взять${s.pot ? ` +${s.pot}` : ''}</button>
         <button class="bad" data-act="move" data-arg="pass" ${myTurn && connected && me.chips > 0 ? '' : 'disabled'}>Нет, спасибо<br><small>−1 фишка</small></button>
       </div>
-      <h2>Вы</h2>
+      <h2>Вы · счёт: ${NoThanks.score(me).total}</h2>
       ${playerBox(me, true)}` : '<p class="muted center">Вы наблюдаете за партией.</p>'}
     <h2>Соперники</h2>
     ${others.map(p => playerBox(p, false)).join('')}
